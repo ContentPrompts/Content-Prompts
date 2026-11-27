@@ -8,13 +8,132 @@ import GrowthSection from "@/components/index/GrowthSection/GrowthSection";
 
 gsap.registerPlugin(Flip, SplitText);
 
+const CARDS = [
+  "Ads that perform",
+  "Built to scale",
+  "Strategy that wins",
+  "More Leads, More Sales",
+];
+const CARD_GAP = 8; // px between each card in the stack
+const INTERVAL = 2; // seconds each card stays on top
+
 export default function PreloaderHero() {
   const preloaderRef = useRef(null);
   const preloaderBgRef = useRef(null);
   const preloaderGridRef = useRef(null);
   const progressMarkerRef = useRef(null);
+  const cardRefs = useRef([]);
+  const stackWrapperRef = useRef(null);
+  const intervalRef = useRef(null);
+  const isHoveredRef = useRef(false);
   // Controls React unmount of preloader — never call .remove() on the node directly
   const [preloaderDone, setPreloaderDone] = useState(false);
+
+  // ── Card stack loop animation ──────────────────────────────────────────────
+  useEffect(() => {
+    const cards = cardRefs.current;
+    if (!cards.length) return;
+
+    const total = cards.length;
+    // order[i] = which visual slot (0 = front) card i is currently in
+    const order = cards.map((_, i) => i);
+
+    // Set all cards to their initial stacked positions
+    const setPositions = (animate = false) => {
+      cards.forEach((card, i) => {
+        const slot = order[i];
+        const target = {
+          top: slot * CARD_GAP,
+          zIndex: total - slot,
+          opacity: 1,
+        };
+        if (animate) {
+          gsap.to(card, { ...target, duration: 0.5, ease: "power2.out" });
+        } else {
+          gsap.set(card, target);
+        }
+      });
+    };
+
+    setPositions(false);
+
+    let animating = false;
+
+    const cycle = () => {
+      if (animating || isHoveredRef.current) return;
+      animating = true;
+
+      const frontIndex = order.indexOf(0);
+      const frontCard = cards[frontIndex];
+
+      gsap.to(frontCard, {
+        y: -40,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.in",
+        onComplete: () => {
+          order.forEach((slot, i) => {
+            order[i] = slot === 0 ? total - 1 : slot - 1;
+          });
+
+          gsap.set(frontCard, {
+            y: 0,
+            top: (total - 1) * CARD_GAP,
+            zIndex: 1,
+            opacity: 0,
+          });
+          setPositions(true);
+          gsap.to(frontCard, {
+            opacity: 1,
+            duration: 0.4,
+            delay: 0.2,
+            ease: "power1.out",
+          });
+
+          animating = false;
+        },
+      });
+    };
+
+    intervalRef.current = setInterval(cycle, INTERVAL * 1000);
+
+    // ── Hover: expand to list ──────────────────────────────────────────────
+    const CARD_HEIGHT = 40; // approx card height in px
+    const EXPANDED_GAP = 10;
+
+    const onMouseEnter = () => {
+      isHoveredRef.current = true;
+      // Expand — each card drops to its full spaced position
+      cards.forEach((card, i) => {
+        const slot = order[i];
+        gsap.to(card, {
+          top: slot * (CARD_HEIGHT + EXPANDED_GAP),
+          zIndex: total - slot,
+          opacity: 1,
+          y: 0,
+          duration: 0.45,
+          ease: "power3.out",
+        });
+      });
+    };
+
+    const onMouseLeave = () => {
+      isHoveredRef.current = false;
+      // Collapse back to stack
+      setPositions(true);
+    };
+
+    const wrapper = stackWrapperRef.current;
+    wrapper.addEventListener("mouseenter", onMouseEnter);
+    wrapper.addEventListener("mouseleave", onMouseLeave);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      gsap.killTweensOf(cards);
+      wrapper.removeEventListener("mouseenter", onMouseEnter);
+      wrapper.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, []);
 
   // Force video playback — autoplay can silently fail on new devices
   useEffect(() => {
@@ -326,6 +445,26 @@ export default function PreloaderHero() {
 
       {/* Hero */}
       <section className="relative w-full h-svh p-10 max-md:p-4 flex justify-between items-end max-md:flex-col max-md:justify-end max-md:items-start max-md:gap-4 overflow-hidden">
+        {/* ── Card stack ── */}
+        <div
+          ref={stackWrapperRef}
+          className="absolute top-65 right-6 md:top-90 lg:right-60 2xl:right-110 z-10 w-38 lg:w-80 2xl:w-100"
+          style={{ height: "220px" }}
+        >
+          {CARDS.map((text, i) => (
+            <div
+              key={i}
+              ref={(el) => (cardRefs.current[i] = el)}
+              className="absolute left-0 text-center right-0 rounded-lg border border-white/20 bg-white/10 backdrop-blur-md px-4 py-2.5 whitespace-nowrap"
+            >
+              <span className="text-white/85 text-[0.6rem] lg:text-[1rem] font4 font-medium tracking-widest">
+                {text}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Background image */}
         <div className="absolute top-0 left-0 w-full h-full">
           <picture className="w-full h-full">
             <source media="(max-width: 768px)" srcSet="/hero22.png" />
