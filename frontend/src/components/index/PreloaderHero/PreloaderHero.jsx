@@ -327,13 +327,16 @@ export default function PreloaderHero() {
       {/* Hero */}
       <section className="relative w-full h-svh p-10 max-md:p-4 flex justify-between items-end max-md:flex-col max-md:justify-end max-md:items-start max-md:gap-4 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full">
-          <img
-            src="/hero2.jpg"
-            alt="Hero background"
-            className="w-full h-full object-cover"
-          />
-            <div className="absolute inset-0 bg-[#291541]/10"></div>
-
+          <picture className="w-full h-full">
+            <source media="(max-width: 768px)" srcSet="/hero22.png" />
+            <source media="(min-width: 769px)" srcSet="/hero2.jpg" />
+            <img
+              src="/hero22.png"
+              alt="Hero background"
+              className="w-full h-full object-cover"
+            />
+          </picture>
+          <div className="absolute inset-0 bg-[#291541]/10"></div>
         </div>
 
         <div className="hero-title relative z-1">
