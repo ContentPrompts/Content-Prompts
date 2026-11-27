@@ -440,7 +440,7 @@ function Card({
 export default function ServiceCards() {
   return (
     <section className="relative w-full bg-[#edeee8] py-16 pb-25 sm:py-24 px-5 sm:px-16 2xl:px-32 overflow-hidden">
-      <div className="grid grid-cols-1 gap-x-8 gap-y-16 md:gap-y-8 sm:gap-y-10 justify-items-center sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:gap-y-8 sm:gap-y-10 justify-items-center sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {SERVICES_CARDS.map((card, i) => (
           <Card key={i} index={i} {...card} />
         ))}
