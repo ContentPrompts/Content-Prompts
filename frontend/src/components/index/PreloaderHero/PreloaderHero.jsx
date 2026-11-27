@@ -28,7 +28,9 @@ export default function PreloaderHero() {
           document.removeEventListener("touchstart", playOnInteraction);
         };
         document.addEventListener("click", playOnInteraction, { once: true });
-        document.addEventListener("touchstart", playOnInteraction, { once: true });
+        document.addEventListener("touchstart", playOnInteraction, {
+          once: true,
+        });
       });
     }
   }, []);
@@ -325,16 +327,13 @@ export default function PreloaderHero() {
       {/* Hero */}
       <section className="relative w-full h-svh p-10 max-md:p-4 flex justify-between items-end max-md:flex-col max-md:justify-end max-md:items-start max-md:gap-4 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className="hero-video w-full h-full object-cover"
-          >
-            <source src="/hero/hero-footage.mp4" type="video/mp4" />
-          </video>
+          <img
+            src="/hero2.jpg"
+            alt="Hero background"
+            className="w-full h-full object-cover"
+          />
+            <div className="absolute inset-0 bg-[#291541]/10"></div>
+
         </div>
 
         <div className="hero-title relative z-1">
