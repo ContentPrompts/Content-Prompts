@@ -448,7 +448,7 @@ export default function PreloaderHero() {
         {/* ── Card stack ── */}
         <div
           ref={stackWrapperRef}
-          className="absolute top-65 right-6 md:top-90 lg:right-85 2xl:right-110 z-10 w-38 lg:w-80 2xl:w-100"
+          className="absolute top-65 right-6 md:top-60 lg:right-95 2xl:right-110 z-10 w-38 lg:w-80 2xl:w-100"
           style={{ height: "220px" }}
         >
           {CARDS.map((text, i) => (
