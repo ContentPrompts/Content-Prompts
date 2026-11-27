@@ -25,7 +25,6 @@ function getIsMobile() {
 }
 
 function FaceContent({ tag, title, description, price, thumbImg, compact }) {
-  // Derive a clean name from the image filename for the alt text
   const imgName = thumbImg
     .split("/")
     .pop()
@@ -33,7 +32,7 @@ function FaceContent({ tag, title, description, price, thumbImg, compact }) {
 
   return (
     <>
-      {/* Thumbnail — fixed height, never grows */}
+      {/* Thumbnail */}
       <img
         src={thumbImg}
         alt={imgName}
@@ -62,7 +61,7 @@ function FaceContent({ tag, title, description, price, thumbImg, compact }) {
         {title}
       </h2>
 
-      {/* Description — clamp so it never overflows the card */}
+      {/* Description */}
       <p
         className={`text-neutral-600 leading-relaxed flex-1 overflow-hidden ${
           compact
@@ -73,7 +72,7 @@ function FaceContent({ tag, title, description, price, thumbImg, compact }) {
         {description}
       </p>
 
-      {/* Divider — always visible, never pushed off */}
+      {/* Divider */}
       <div
         className={`h-px bg-neutral-200 shrink-0 ${compact ? "mb-2" : "mb-3"}`}
       />
@@ -143,10 +142,7 @@ function Card({
   function handleCardClick() {
     const target = document.getElementById("contact-form");
     if (!target) return;
-
     const targetY = target.getBoundingClientRect().top + window.scrollY;
-
-    // Proxy object lets GSAP tween window.scrollY
     const proxy = { y: window.scrollY };
     gsap.to(proxy, {
       y: targetY,
@@ -158,12 +154,18 @@ function Card({
     });
   }
 
-  // ── Reveal animation ──────────────────────────────────
+  // ── Measure width + detect mobile ────────────────────────────────────────
   useEffect(() => {
     const m = getIsMobile();
     setMobile(m);
     const el = wrapperRef.current;
     if (el) setActualW(el.getBoundingClientRect().width);
+  }, []);
+
+  // ── Desktop: fade-in reveal ───────────────────────────────────────────────
+  useEffect(() => {
+    if (mobile) return; // mobile has its own scroll animation below
+    const el = wrapperRef.current;
     if (!el) return;
 
     const tween = gsap.fromTo(
@@ -177,37 +179,24 @@ function Card({
         delay: (index % 4) * 0.08,
         scrollTrigger: {
           trigger: el,
-          scroller: (() => {
-            let p = el.parentElement;
-            while (p) {
-              const oy = window.getComputedStyle(p).overflowY;
-              if (
-                (oy === "auto" || oy === "scroll") &&
-                p.scrollHeight > p.clientHeight
-              )
-                return p;
-              p = p.parentElement;
-            }
-            return window;
-          })(),
           start: "top 88%",
           once: true,
         },
       },
     );
 
-    // Only kill this card's own trigger — never all triggers globally
     return () => tween.scrollTrigger?.kill();
-  }, [index]);
+  }, [mobile, index]);
 
+  // ── Desktop: hover flip ───────────────────────────────────────────────────
   useEffect(() => {
+    if (mobile) return;
     const cube = cubeRef.current;
     if (!cube) return;
 
-    const mobile = getIsMobile();
-    const cardD = mobile ? D_M : D;
-    const cardW = actualW ?? (mobile ? W_M : W);
-    const cardH = mobile ? H_M : H;
+    const cardD = D;
+    const cardW = actualW ?? W;
+    const cardH = H;
 
     const rotation = { flip: 0, tiltX: 0, tiltY: 0 };
     let isFlipped = false;
@@ -255,7 +244,6 @@ function Card({
       const cy = bounds.top + bounds.height / 2;
       const ox = (e.clientX - cx) / bounds.width;
       const oy = (e.clientY - cy) / bounds.height;
-
       gsap.to(rotation, {
         tiltY: ox * PARALLAX_STRENGTH,
         tiltX: -oy * PARALLAX_STRENGTH,
@@ -276,14 +264,66 @@ function Card({
       cube.removeEventListener("mousemove", onMove);
       gsap.killTweensOf(rotation);
     };
-  }, [actualW]);
+  }, [mobile, actualW]);
+
+  // ── Mobile: scroll-driven flip from gradient top face → info front face ──
+  useEffect(() => {
+    if (!mobile) return;
+    const cube = cubeRef.current;
+    const el = wrapperRef.current;
+    if (!cube || !el) return;
+
+    const cardD = D_M;
+
+    // Start rotated so the TOP (gradient) face is pointing at the viewer,
+    // then flip to 0 (front/info face) as the card enters the viewport.
+    // rotateX(-90) shows the top face; rotateX(0) shows the front face.
+    const rotation = { rx: -90 };
+
+    function render() {
+      gsap.set(cube, {
+        rotationX: rotation.rx,
+        z: -cardD / 2,
+      });
+    }
+    render();
+
+    // Each card gets its own staggered scrub window so they flip one by one
+    // as the user scrolls down through the grid.
+    const staggerOffset = (index % 2) * 12; // slight offset per column
+
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: `top ${72 - staggerOffset}%`,
+      end: `top ${28 - staggerOffset}%`,
+      scrub: 1.2,
+      onUpdate(self) {
+        rotation.rx = gsap.utils.interpolate(-90, 0, self.progress);
+        render();
+      },
+      // Once fully flipped, snap to exactly 0 so it stays clean
+      onLeave() {
+        gsap.to(rotation, {
+          rx: 0,
+          duration: 0.3,
+          ease: "power2.out",
+          onUpdate: render,
+        });
+      },
+    });
+
+    // Fade in the wrapper itself immediately (no opacity animation on mobile —
+    // the flip itself is the reveal)
+    gsap.set(el, { opacity: 1 });
+
+    return () => st.kill();
+  }, [mobile, index]);
 
   const cardW = actualW ?? (mobile ? W_M : W);
   const cardH = mobile ? H_M : H;
   const cardD = mobile ? D_M : D;
 
   return (
-    /* Perspective wrapper */
     <div
       ref={wrapperRef}
       className="w-full"
@@ -291,9 +331,11 @@ function Card({
         maxWidth: mobile ? "100%" : cardW,
         height: cardH,
         perspective: "2000px",
+        // Mobile cards start invisible so the flip is the reveal;
+        // desktop cards start invisible for the fade-in effect.
+        opacity: 0,
       }}
     >
-      {/* Cube */}
       <div
         onClick={handleCardClick}
         className="block w-full h-full cursor-pointer"
@@ -302,7 +344,7 @@ function Card({
           ref={cubeRef}
           className="otsuka-cube relative w-full h-full cursor-pointer"
         >
-          {/* Front */}
+          {/* Front (info face) */}
           <div
             className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
             style={{
@@ -322,8 +364,7 @@ function Card({
             />
           </div>
 
-          {/* Back — backface-visibility:hidden (set in globals.css via .otsuka-face)
-            keeps this invisible until the cube flips to show it */}
+          {/* Back */}
           <div
             className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
             style={{
@@ -367,7 +408,7 @@ function Card({
             }}
           />
 
-          {/* Top */}
+          {/* Top — gradient face the viewer sees first on mobile */}
           <div
             className="otsuka-face absolute rounded-2xl"
             style={{
@@ -398,8 +439,8 @@ function Card({
 
 export default function ServiceCards() {
   return (
-    <section className="relative w-full bg-[#edeee8] py-16 sm:py-24 px-5 sm:px-16 2xl:px-32 overflow-hidden">
-      <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:gap-y-10 justify-items-center sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <section className="relative w-full bg-[#edeee8] py-16 pb-25 sm:py-24 px-5 sm:px-16 2xl:px-32 overflow-hidden">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-16 md:gap-y-8 sm:gap-y-10 justify-items-center sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {SERVICES_CARDS.map((card, i) => (
           <Card key={i} index={i} {...card} />
         ))}
