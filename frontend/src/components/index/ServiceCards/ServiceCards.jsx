@@ -26,7 +26,10 @@ function getIsMobile() {
 
 function FaceContent({ tag, title, description, price, thumbImg, compact }) {
   // Derive a clean name from the image filename for the alt text
-  const imgName = thumbImg.split("/").pop().replace(/\.[^/.]+$/, "");
+  const imgName = thumbImg
+    .split("/")
+    .pop()
+    .replace(/\.[^/.]+$/, "");
 
   return (
     <>
@@ -134,6 +137,7 @@ function Card({
   const cubeRef = useRef(null);
   const wrapperRef = useRef(null);
   const [mobile, setMobile] = useState(false);
+  const [actualW, setActualW] = useState(null);
 
   // ── Card click → smooth GSAP scroll to form ─────────────────────────────
   function handleCardClick() {
@@ -159,6 +163,7 @@ function Card({
     const m = getIsMobile();
     setMobile(m);
     const el = wrapperRef.current;
+    if (el) setActualW(el.getBoundingClientRect().width);
     if (!el) return;
 
     const tween = gsap.fromTo(
@@ -201,7 +206,7 @@ function Card({
 
     const mobile = getIsMobile();
     const cardD = mobile ? D_M : D;
-    const cardW = mobile ? W_M : W;
+    const cardW = actualW ?? (mobile ? W_M : W);
     const cardH = mobile ? H_M : H;
 
     const rotation = { flip: 0, tiltX: 0, tiltY: 0 };
@@ -271,9 +276,9 @@ function Card({
       cube.removeEventListener("mousemove", onMove);
       gsap.killTweensOf(rotation);
     };
-  }, []);
+  }, [actualW]);
 
-  const cardW = mobile ? W_M : W;
+  const cardW = actualW ?? (mobile ? W_M : W);
   const cardH = mobile ? H_M : H;
   const cardD = mobile ? D_M : D;
 
@@ -293,99 +298,99 @@ function Card({
         onClick={handleCardClick}
         className="block w-full h-full cursor-pointer"
       >
-      <div
-        ref={cubeRef}
-        className="otsuka-cube relative w-full h-full cursor-pointer"
-      >
-        {/* Front */}
         <div
-          className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
-          style={{
-            width: "100%",
-            height: cardH,
-            padding: mobile ? "8px" : "16px",
-            transform: `translateZ(${cardD / 2}px)`,
-          }}
+          ref={cubeRef}
+          className="otsuka-cube relative w-full h-full cursor-pointer"
         >
-          <FaceContent
-            tag={tag}
-            title={title}
-            description={description}
-            price={price}
-            thumbImg={thumbImg}
-            compact={mobile}
-          />
-        </div>
+          {/* Front */}
+          <div
+            className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
+            style={{
+              width: "100%",
+              height: cardH,
+              padding: mobile ? "8px" : "16px",
+              transform: `translateZ(${cardD / 2}px)`,
+            }}
+          >
+            <FaceContent
+              tag={tag}
+              title={title}
+              description={description}
+              price={price}
+              thumbImg={thumbImg}
+              compact={mobile}
+            />
+          </div>
 
-        {/* Back — backface-visibility:hidden (set in globals.css via .otsuka-face)
+          {/* Back — backface-visibility:hidden (set in globals.css via .otsuka-face)
             keeps this invisible until the cube flips to show it */}
-        <div
-          className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
-          style={{
-            width: "100%",
-            height: cardH,
-            padding: mobile ? "8px" : "16px",
-            transform: `rotateX(180deg) translateZ(${cardD / 2}px)`,
-          }}
-        >
-          <FaceContent
-            tag={tag}
-            title={title}
-            description={description}
-            price={price}
-            thumbImg={thumbImg}
-            compact={mobile}
+          <div
+            className="otsuka-face absolute bg-white flex flex-col rounded-2xl border border-slate-200 overflow-hidden"
+            style={{
+              width: "100%",
+              height: cardH,
+              padding: mobile ? "8px" : "16px",
+              transform: `rotateX(180deg) translateZ(${cardD / 2}px)`,
+            }}
+          >
+            <FaceContent
+              tag={tag}
+              title={title}
+              description={description}
+              price={price}
+              thumbImg={thumbImg}
+              compact={mobile}
+            />
+          </div>
+
+          {/* Right */}
+          <div
+            className="otsuka-face absolute rounded-2xl"
+            style={{
+              width: cardD,
+              height: cardH,
+              left: (cardW - cardD) / 2,
+              background: sideGradient,
+              transform: `rotateY(90deg) translateZ(${cardW / 2}px)`,
+            }}
+          />
+
+          {/* Left */}
+          <div
+            className="otsuka-face absolute rounded-2xl"
+            style={{
+              width: cardD,
+              height: cardH,
+              left: (cardW - cardD) / 2,
+              background: sideGradient,
+              transform: `rotateY(-90deg) translateZ(${cardW / 2}px)`,
+            }}
+          />
+
+          {/* Top */}
+          <div
+            className="otsuka-face absolute rounded-2xl"
+            style={{
+              width: cardW,
+              height: cardD,
+              top: (cardH - cardD) / 2,
+              background: sideGradient,
+              transform: `rotateX(90deg) translateZ(${cardH / 2}px)`,
+            }}
+          />
+
+          {/* Bottom */}
+          <div
+            className="otsuka-face absolute rounded-2xl"
+            style={{
+              width: cardW,
+              height: cardD,
+              top: (cardH - cardD) / 2,
+              background: sideGradient,
+              transform: `rotateX(-90deg) translateZ(${cardH / 2}px)`,
+            }}
           />
         </div>
-
-        {/* Right */}
-        <div
-          className="otsuka-face absolute rounded-2xl"
-          style={{
-            width: cardD,
-            height: cardH,
-            left: (cardW - cardD) / 2,
-            background: sideGradient,
-            transform: `rotateY(90deg) translateZ(${cardW / 2}px)`,
-          }}
-        />
-
-        {/* Left */}
-        <div
-          className="otsuka-face absolute rounded-2xl"
-          style={{
-            width: cardD,
-            height: cardH,
-            left: (cardW - cardD) / 2,
-            background: sideGradient,
-            transform: `rotateY(-90deg) translateZ(${cardW / 2}px)`,
-          }}
-        />
-
-        {/* Top */}
-        <div
-          className="otsuka-face absolute rounded-2xl"
-          style={{
-            width: cardW,
-            height: cardD,
-            top: (cardH - cardD) / 2,
-            background: sideGradient,
-            transform: `rotateX(90deg) translateZ(${cardH / 2}px)`,
-          }}
-        />
-
-        {/* Bottom */}
-        <div
-          className="otsuka-face absolute rounded-2xl"
-          style={{
-            width: cardW,
-            height: cardD,
-            top: (cardH - cardD) / 2,
-            background: sideGradient,
-            transform: `rotateX(-90deg) translateZ(${cardH / 2}px)`,
-          }}
-        />
-      </div>
       </div>
     </div>
   );
